@@ -1,0 +1,3 @@
+[submodule "iphone/XtremePush_iOS"]
+	path = iphone/XtremePush_iOS
+	url = git://github.com/xtremepush/XtremePush_iOS.git
