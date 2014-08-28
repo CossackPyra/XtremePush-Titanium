@@ -29,13 +29,12 @@
 
 - (void)startup {
     [super startup];
-    [[TiApp app] setRemoteNotificationDelegate:self];
 
+    [[TiApp app] setRemoteNotificationDelegate:self];
     NSLog(@"[INFO] %@ loaded", [self moduleId]);
 }
 
 + (void)applicationDidFinishLaunching:(NSNotification *)userInfo {
-    NSLog(@"%@", userInfo);
     NSDictionary *launchOptions = [TiApp app].launchOptions;
     [XPush applicationDidFinishLaunchingWithOptions:launchOptions];
 }
@@ -154,11 +153,29 @@
             return;
         }
 
-        if ([pushList count] != 0)
-            [self _fireEventToListener:@"success" withObject:pushList[0] listener:successCallback thisObject:self];
-//        for (XPPushModel *model in pushList) {
-//            [array addObject:[self convertModelToDicitionary:model]];
-//        }
+        NSMutableArray *notifications = [NSMutableArray array];
+        for (XPPushModel *model in pushList) {
+            NSMutableDictionary *notification = [NSMutableDictionary dictionary];
+            notification[@"badge"] = @(model.badge);
+            notification[@"shouldOpenInApp"] = @(model.shouldOpenInApp);
+            if (model.pushId) notification[@"pushId"] = model.pushId;
+            if (model.locationId) notification[@"locationId"] = model.locationId;
+            if (model.alert) notification[@"alert"] = model.alert;
+            if (model.messageId) notification[@"messageId"] = model.messageId;
+            if (model.url) notification[@"pushId"] = model.url;
+            if (model.createDate)
+                notification[@"createDate"] = [NSDateFormatter localizedStringFromDate:model.createDate
+                                                                             dateStyle:NSDateFormatterShortStyle
+                                                                             timeStyle:NSDateFormatterFullStyle];
+            [notifications addObject:notification];
+        }
+
+        NSDictionary *res = @{
+                @"code" : @0,
+                @"success" : @YES,
+                @"notifications" : notifications
+        };
+        [self _fireEventToListener:@"success" withObject:res listener:successCallback thisObject:self];
     }];
 }
 
@@ -174,8 +191,8 @@
                 stringByReplacingOccurrencesOfString:@" " withString:@""];
         NSDictionary *res = @{
                 @"code" : @0,
-                @"deviceToken" : token,
-                @"success" : @YES
+                @"success" : @YES,
+                @"deviceToken" : token
         };
         [self _fireEventToListener:@"remote" withObject:res listener:_registerSuccessCallback thisObject:self];
     }
