@@ -8,6 +8,10 @@
 #import "TiModule.h"
 
 @interface ComKrilabXtremepushModule : TiModule {
+    KrollCallback *_registerSuccessCallback;
+    KrollCallback *_registerErrorCallback;
 }
 
+@property(nonatomic, strong) KrollCallback *registerSuccessCallback;
+@property(nonatomic, strong) KrollCallback *registerErrorCallback;
 @end

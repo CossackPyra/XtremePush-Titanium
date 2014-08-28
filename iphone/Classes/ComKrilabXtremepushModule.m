@@ -12,6 +12,7 @@
 
 @implementation ComKrilabXtremepushModule
 
+
 #pragma mark Internal
 
 // this is generated for your module, please do not change it
@@ -23,6 +24,7 @@
 - (NSString *)moduleId {
     return @"com.krilab.xtremepush";
 }
+
 
 #pragma mark Lifecycle
 
@@ -47,16 +49,16 @@
 
 #pragma Public APIs
 
-- (id)register:(id)args {
+- (void)register:(id)args {
     ENSURE_SINGLE_ARG(args, NSDictionary);
     NSArray *types = args[@"types"];
     NSNumber *showAlerts = args[@"showAlerts"];
-    KrollCallback *success = args[@"success"];
-    KrollCallback *error = args[@"error"];
+    _registerSuccessCallback = args[@"success"];
+    _registerErrorCallback = args[@"error"];
     ENSURE_TYPE_OR_NIL(types, NSArray);
     ENSURE_TYPE_OR_NIL(showAlerts, NSNumber);
-    ENSURE_TYPE_OR_NIL(success, KrollCallback);
-    ENSURE_TYPE_OR_NIL(error, KrollCallback);
+    ENSURE_TYPE_OR_NIL(_registerSuccessCallback, KrollCallback);
+    ENSURE_TYPE_OR_NIL(_registerErrorCallback, KrollCallback);
 
     UIRemoteNotificationType notificationTypes = UIRemoteNotificationTypeNone;
     for (NSNumber *type in types) {
@@ -81,8 +83,6 @@
 
     [[TiApp app] setRemoteNotificationDelegate:self];
     [XPush registerForRemoteNotificationTypes:notificationTypes];
-
-    return nil;
 }
 
 - (void)unregister {
@@ -94,10 +94,33 @@
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     [XPush applicationDidRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+
+    if (_registerSuccessCallback) {
+        NSString *token = [[[[deviceToken description] stringByReplacingOccurrencesOfString:@"<" withString:@""]
+                stringByReplacingOccurrencesOfString:@">" withString:@""]
+                stringByReplacingOccurrencesOfString:@" " withString:@""];
+        NSDictionary *res = @{
+                @"code" : @0,
+                @"deviceToken" : token,
+                @"success" : @YES,
+                @"type" : @"remote"
+        };
+        [self _fireEventToListener:@"success" withObject:res listener:_registerSuccessCallback thisObject:self];
+    }
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
     [XPush applicationDidFailToRegisterForRemoteNotificationsWithError:error];
+
+    if (_registerErrorCallback) {
+        NSDictionary *res = @{
+                @"code" : @([error code]),
+                @"error" : [error localizedDescription],
+                @"success" : @NO,
+                @"type" : @"remote"
+        };
+        [self _fireEventToListener:@"error" withObject:res listener:_registerErrorCallback thisObject:self];
+    }
 }
 
 @end
