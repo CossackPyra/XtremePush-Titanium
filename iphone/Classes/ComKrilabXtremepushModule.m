@@ -87,7 +87,7 @@
     [XPush registerForRemoteNotificationTypes:notificationTypes];
 }
 
-- (void)unregister {
+- (void)unregister:(id)args {
     [XPush unregisterForRemoteNotifications];
 }
 
