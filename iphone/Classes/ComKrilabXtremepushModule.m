@@ -129,11 +129,11 @@
     [XPush hitImpression:impression];
 }
 
-- (void)showPushListController:(id)args {
+- (void)showPushList:(id)args {
     [XPush showPushListController];
 }
 
-- (void)getPushNotificationsOffset:(id)args {
+- (void)getPushNotifications:(id)args {
     ENSURE_SINGLE_ARG_OR_NIL(args, NSDictionary);
     uint offset = (uint) [TiUtils intValue:@"offset" properties:args def:0];
     uint limit = (uint) [TiUtils intValue:@"limit" properties:args def:-1];
