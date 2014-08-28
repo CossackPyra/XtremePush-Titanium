@@ -80,6 +80,8 @@
                 break;
         }
     }
+    if (notificationTypes == UIRemoteNotificationTypeNone)
+        DebugLog(@"[WARM] XtremePush.register(): Push notification type is set to none");
 
     [[TiApp app] setRemoteNotificationDelegate:self];
     [XPush registerForRemoteNotificationTypes:notificationTypes];
@@ -87,6 +89,55 @@
 
 - (void)unregister {
     [XPush unregisterForRemoteNotifications];
+}
+
+- (id)isSandboxModeOn {
+    return @([XPush isSandboxModeOn]);
+}
+
+- (id)version {
+    return [XPush version];
+}
+
+- (id)deviceInfo {
+    return [XPush deviceInfo];
+}
+
+- (id)shouldWipeBadgeNumber {
+    return @([XPush shouldWipeBadgeNumber]);
+}
+
+- (void)setShouldWipeBadgeNumber:(id)value {
+    BOOL wipeBadgeNumber = [TiUtils boolValue:value];
+    [XPush setShouldWipeBadgeNumber:wipeBadgeNumber];
+}
+
+- (void)setLocationEnabled:(id)value {
+    BOOL locationEnabled = [TiUtils boolValue:value];
+    [XPush setLocationEnabled:locationEnabled];
+}
+
+- (void)setAsksForLocationPermissions:(id)value {
+    BOOL asksForLocationPermissions = [TiUtils boolValue:value];
+    [XPush setAsksForLocationPermissions:asksForLocationPermissions];
+}
+
+- (void)hitTag:(id)value {
+    NSString *tag = [TiUtils stringValue:value];
+    [XPush hitTag:tag];
+}
+
+- (void)hitImpression:(id)value {
+    NSString *impression = [TiUtils stringValue:value];
+    [XPush hitImpression:impression];
+}
+
+- (void)showPushListController:(id)args {
+    [XPush showPushListController];
+}
+
+- (id)getPushNotificationsOffset {
+    return nil;
 }
 
 
