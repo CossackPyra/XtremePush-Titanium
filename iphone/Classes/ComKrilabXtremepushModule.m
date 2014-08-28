@@ -214,7 +214,7 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
     [XPush applicationDidReceiveRemoteNotification:userInfo showAlert:_showAlerts];
     if (_receiveCallback) {
-        [self _fireEventToListener:@"receive" withObject:userInfo listener:_receiveCallback thisObject:self];
+        [self _fireEventToListener:@"remote" withObject:userInfo listener:_receiveCallback thisObject:self];
     }
 }
 
