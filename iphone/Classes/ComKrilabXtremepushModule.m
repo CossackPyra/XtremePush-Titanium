@@ -214,7 +214,12 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
     [XPush applicationDidReceiveRemoteNotification:userInfo showAlert:_showAlerts];
     if (_receiveCallback) {
-        [self _fireEventToListener:@"remote" withObject:userInfo listener:_receiveCallback thisObject:self];
+        BOOL inBackground = (application.applicationState != UIApplicationStateActive);
+        NSDictionary *res = @{
+            @"data" : userInfo,
+            @"inBackground" : @(inBackground)
+        };
+        [self _fireEventToListener:@"remote" withObject:res listener:_receiveCallback thisObject:self];
     }
 }
 
