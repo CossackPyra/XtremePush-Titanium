@@ -29,6 +29,8 @@
 
 - (void)startup {
     [super startup];
+    [[TiApp app] setRemoteNotificationDelegate:self];
+
     NSLog(@"[INFO] %@ loaded", [self moduleId]);
 }
 
@@ -42,7 +44,7 @@
 #pragma Public APIs
 
 - (void)register:(id)args {
-    ENSURE_SINGLE_ARG(args, NSDictionary);
+    ENSURE_SINGLE_ARG_OR_NIL(args, NSDictionary);
     NSArray *types = args[@"types"];
     NSNumber *showAlerts = args[@"showAlerts"];
     _registerSuccessCallback = args[@"success"];
@@ -133,7 +135,7 @@
 }
 
 - (void)getPushNotificationsOffset:(id)args {
-    ENSURE_SINGLE_ARG(args, NSDictionary);
+    ENSURE_SINGLE_ARG_OR_NIL(args, NSDictionary);
     uint offset = (uint) [TiUtils intValue:@"offset" properties:args def:0];
     uint limit = (uint) [TiUtils intValue:@"limit" properties:args def:-1];
     KrollCallback *successCallback = args[@"success"];
