@@ -46,9 +46,9 @@
     ENSURE_SINGLE_ARG_OR_NIL(args, NSDictionary);
     NSArray *types = args[@"types"];
     NSNumber *showAlerts = args[@"showAlerts"];
-    _registerSuccessCallback = args[@"success"];
-    _registerErrorCallback = args[@"error"];
-    _receiveCallback = args[@"callback"];
+    if (args[@"success"]) _registerSuccessCallback = args[@"success"];
+    if (args[@"error"]) _registerErrorCallback = args[@"error"];
+    if (args[@"callback"]) _receiveCallback = args[@"callback"];
     ENSURE_TYPE_OR_NIL(types, NSArray);
     ENSURE_TYPE_OR_NIL(showAlerts, NSNumber);
     ENSURE_TYPE_OR_NIL(_registerSuccessCallback, KrollCallback);
