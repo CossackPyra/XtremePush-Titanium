@@ -42,7 +42,7 @@
 
 #pragma Public APIs
 
-- (void)register:(id)args {
+- (void)registerForRemoteNotifications:(id)args {
     ENSURE_SINGLE_ARG_OR_NIL(args, NSDictionary);
     NSArray *types = args[@"types"];
     NSNumber *showAlerts = args[@"showAlerts"];
@@ -84,7 +84,7 @@
     [XPush registerForRemoteNotificationTypes:notificationTypes];
 }
 
-- (void)unregister:(id)args {
+- (void)unregisterForRemoteNotifications:(id)args {
     [XPush unregisterForRemoteNotifications];
 }
 
