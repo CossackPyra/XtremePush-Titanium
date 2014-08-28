@@ -149,7 +149,7 @@
                     @"error" : [error localizedDescription],
                     @"success" : @NO
             };
-            [self _fireEventToListener:@"error" withObject:res listener:errorCallback thisObject:self];
+            [self _fireEventToListener:@"notifications" withObject:res listener:errorCallback thisObject:self];
             return;
         }
 
@@ -175,7 +175,7 @@
                 @"success" : @YES,
                 @"notifications" : notifications
         };
-        [self _fireEventToListener:@"success" withObject:res listener:successCallback thisObject:self];
+        [self _fireEventToListener:@"notifications" withObject:res listener:successCallback thisObject:self];
     }];
 }
 
