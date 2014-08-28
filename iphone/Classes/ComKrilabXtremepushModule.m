@@ -1,10 +1,3 @@
-/**
-* XtremePush_Titanium
-*
-* Created by Your Name
-* Copyright (c) 2014 Your Company. All rights reserved.
-*/
-
 #import "ComKrilabXtremepushModule.h"
 #import "TiHost.h"
 #import "TiApp.h"
@@ -15,12 +8,10 @@
 
 #pragma mark Internal
 
-// this is generated for your module, please do not change it
 - (id)moduleGUID {
     return @"5b919b68-52b9-4a7f-9c2c-fe95965794d3";
 }
 
-// this is generated for your module, please do not change it
 - (NSString *)moduleId {
     return @"com.krilab.xtremepush";
 }
@@ -42,6 +33,7 @@
 }
 
 + (void)applicationDidFinishLaunching:(NSNotification *)userInfo {
+    NSLog(@"%@", userInfo);
     NSDictionary *launchOptions = [TiApp app].launchOptions;
     [XPush applicationDidFinishLaunchingWithOptions:launchOptions];
 }
@@ -55,10 +47,14 @@
     NSNumber *showAlerts = args[@"showAlerts"];
     _registerSuccessCallback = args[@"success"];
     _registerErrorCallback = args[@"error"];
+    _receiveCallback = args[@"callback"];
     ENSURE_TYPE_OR_NIL(types, NSArray);
     ENSURE_TYPE_OR_NIL(showAlerts, NSNumber);
     ENSURE_TYPE_OR_NIL(_registerSuccessCallback, KrollCallback);
     ENSURE_TYPE_OR_NIL(_registerErrorCallback, KrollCallback);
+    ENSURE_TYPE_OR_NIL(_receiveCallback, KrollCallback);
+
+    _showAlerts = [TiUtils boolValue:showAlerts def:YES];
 
     UIRemoteNotificationType notificationTypes = UIRemoteNotificationTypeNone;
     for (NSNumber *type in types) {
@@ -81,7 +77,7 @@
         }
     }
     if (notificationTypes == UIRemoteNotificationTypeNone)
-        DebugLog(@"[WARM] XtremePush.register(): Push notification type is set to none");
+        DebugLog(@"[WARN] XtremePush.register(): Push notification type is set to none");
 
     [[TiApp app] setRemoteNotificationDelegate:self];
     [XPush registerForRemoteNotificationTypes:notificationTypes];
@@ -136,8 +132,32 @@
     [XPush showPushListController];
 }
 
-- (id)getPushNotificationsOffset {
-    return nil;
+- (void)getPushNotificationsOffset:(id)args {
+    ENSURE_SINGLE_ARG(args, NSDictionary);
+    uint offset = (uint) [TiUtils intValue:@"offset" properties:args def:0];
+    uint limit = (uint) [TiUtils intValue:@"limit" properties:args def:-1];
+    KrollCallback *successCallback = args[@"success"];
+    KrollCallback *errorCallback = args[@"errorCallback"];
+    ENSURE_TYPE_OR_NIL(successCallback, KrollCallback);
+    ENSURE_TYPE_OR_NIL(errorCallback, KrollCallback);
+
+    [XPush getPushNotificationsOffset:offset limit:limit completion:^(NSArray *pushList, NSError *error) {
+        if (error) {
+            NSDictionary *res = @{
+                    @"code" : @([error code]),
+                    @"error" : [error localizedDescription],
+                    @"success" : @NO
+            };
+            [self _fireEventToListener:@"error" withObject:res listener:errorCallback thisObject:self];
+            return;
+        }
+
+        if ([pushList count] != 0)
+            [self _fireEventToListener:@"success" withObject:pushList[0] listener:successCallback thisObject:self];
+//        for (XPPushModel *model in pushList) {
+//            [array addObject:[self convertModelToDicitionary:model]];
+//        }
+    }];
 }
 
 
@@ -153,10 +173,9 @@
         NSDictionary *res = @{
                 @"code" : @0,
                 @"deviceToken" : token,
-                @"success" : @YES,
-                @"type" : @"remote"
+                @"success" : @YES
         };
-        [self _fireEventToListener:@"success" withObject:res listener:_registerSuccessCallback thisObject:self];
+        [self _fireEventToListener:@"remote" withObject:res listener:_registerSuccessCallback thisObject:self];
     }
 }
 
@@ -167,10 +186,16 @@
         NSDictionary *res = @{
                 @"code" : @([error code]),
                 @"error" : [error localizedDescription],
-                @"success" : @NO,
-                @"type" : @"remote"
+                @"success" : @NO
         };
-        [self _fireEventToListener:@"error" withObject:res listener:_registerErrorCallback thisObject:self];
+        [self _fireEventToListener:@"remote" withObject:res listener:_registerErrorCallback thisObject:self];
+    }
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
+    [XPush applicationDidReceiveRemoteNotification:userInfo showAlert:_showAlerts];
+    if (_receiveCallback) {
+        [self _fireEventToListener:@"receive" withObject:userInfo listener:_receiveCallback thisObject:self];
     }
 }
 
