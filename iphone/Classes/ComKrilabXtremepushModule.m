@@ -136,7 +136,7 @@
 - (void)getPushNotifications:(id)args {
     ENSURE_SINGLE_ARG_OR_NIL(args, NSDictionary);
     uint offset = (uint) [TiUtils intValue:@"offset" properties:args def:0];
-    uint limit = (uint) [TiUtils intValue:@"limit" properties:args def:-1];
+    uint limit = (uint) [TiUtils intValue:@"limit" properties:args def:INT_MAX];
     KrollCallback *successCallback = args[@"success"];
     KrollCallback *errorCallback = args[@"errorCallback"];
     ENSURE_TYPE_OR_NIL(successCallback, KrollCallback);
