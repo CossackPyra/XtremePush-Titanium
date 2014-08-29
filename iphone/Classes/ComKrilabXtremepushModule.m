@@ -138,7 +138,7 @@
     uint offset = (uint) [TiUtils intValue:@"offset" properties:args def:0];
     uint limit = (uint) [TiUtils intValue:@"limit" properties:args def:INT_MAX];
     KrollCallback *successCallback = args[@"success"];
-    KrollCallback *errorCallback = args[@"errorCallback"];
+    KrollCallback *errorCallback = args[@"error"];
     ENSURE_TYPE_OR_NIL(successCallback, KrollCallback);
     ENSURE_TYPE_OR_NIL(errorCallback, KrollCallback);
 
