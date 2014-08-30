@@ -163,10 +163,7 @@
             if (model.alert) notification[@"alert"] = model.alert;
             if (model.messageId) notification[@"messageId"] = @([TiUtils intValue:model.messageId]);
             if (model.url) notification[@"url"] = model.url;
-            if (model.createDate)
-                notification[@"createDate"] = [NSDateFormatter localizedStringFromDate:model.createDate
-                                                                             dateStyle:NSDateFormatterShortStyle
-                                                                             timeStyle:NSDateFormatterFullStyle];
+            if (model.createDate) notification[@"createTimestamp"] = @([model.createDate timeIntervalSince1970]);
             [notifications addObject:notification];
         }
 
