@@ -141,6 +141,10 @@
     KrollCallback *errorCallback = args[@"error"];
     ENSURE_TYPE_OR_NIL(successCallback, KrollCallback);
     ENSURE_TYPE_OR_NIL(errorCallback, KrollCallback);
+    if (!successCallback) {
+        DebugLog(@"[WARN] No success callback to getPushNotifications(); return");
+        return;
+    }
 
     [XPush getPushNotificationsOffset:offset limit:limit completion:^(NSArray *pushList, NSError *error) {
         if (error) {
