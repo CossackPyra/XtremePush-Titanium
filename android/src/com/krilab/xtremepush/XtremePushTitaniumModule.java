@@ -238,6 +238,10 @@ public class XtremePushTitaniumModule extends KrollModule {
                 throw new IllegalArgumentException("Unsupported property type for 'success' " + success.getClass().getName());
             successCallback = (KrollFunction) success;
         }
+        if (successCallback == null) {
+            Log.w(LCAT, "No success callback to getPushNotifications(); return");
+            return;
+        }
 
         class Callback implements Handler.Callback {
             KrollFunction successCallback;
