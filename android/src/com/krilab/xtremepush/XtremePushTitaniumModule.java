@@ -65,6 +65,10 @@ public class XtremePushTitaniumModule extends KrollModule {
             HashMap<String, Object> options = (HashMap<String, Object>) args;
             locationTimeoutValue = options.get("locationTimeoutValue");
             locationDistanceValue = options.get("locationDistanceValue");
+            Object receiveCallback = options.get("callback");
+            if (receiveCallback != null && !(receiveCallback instanceof KrollFunction))
+                throw new IllegalArgumentException("Unsupported property type for 'callback' " + receiveCallback.getClass().getName());
+            this.receiveCallback = (KrollFunction) receiveCallback;
         }
 
 
