@@ -158,6 +158,7 @@
             NSMutableDictionary *notification = [NSMutableDictionary dictionary];
             notification[@"badge"] = @(model.badge);
             notification[@"shouldOpenInApp"] = @(model.shouldOpenInApp);
+            notification[@"read"] = @(model.isRead);
             if (model.pushId) notification[@"id"] = @([TiUtils intValue:model.pushId]);
             if (model.locationId) notification[@"locationId"] = model.locationId;
             if (model.alert) notification[@"alert"] = model.alert;
