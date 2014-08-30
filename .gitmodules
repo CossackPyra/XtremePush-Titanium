@@ -3,4 +3,4 @@
 	url = git://github.com/xtremepush/XtremePush_iOS.git
 [submodule "android/XtremePush_Android"]
 	path = android/XtremePush_Android
-	url = git@github.com:farwayer/XtremePush_Android.git
+	url = git://github.com/farwayer/XtremePush_Android.git
