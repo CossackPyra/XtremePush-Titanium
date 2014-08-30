@@ -156,6 +156,8 @@ public class XtremePushTitaniumModule extends KrollModule {
             return null;
         }
 
+        // @WARN: can crash if no deviceToken or XPushDeviceID
+        // and we can't check it now
         return pushConnector.getDeviceInfo();
     }
 
