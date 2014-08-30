@@ -144,6 +144,7 @@
 
     [XPush getPushNotificationsOffset:offset limit:limit completion:^(NSArray *pushList, NSError *error) {
         if (error) {
+            if (!errorCallback) return;
             NSDictionary *res = @{
                     @"code" : @([error code]),
                     @"error" : [error localizedDescription],
@@ -152,6 +153,8 @@
             [self _fireEventToListener:@"notifications" withObject:res listener:errorCallback thisObject:self];
             return;
         }
+
+        if (!successCallback) return;
 
         NSMutableArray *notifications = [NSMutableArray array];
         for (XPPushModel *model in pushList) {
