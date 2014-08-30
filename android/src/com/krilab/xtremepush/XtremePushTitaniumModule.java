@@ -2,6 +2,8 @@ package com.krilab.xtremepush;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -37,6 +39,7 @@ public class XtremePushTitaniumModule extends KrollModule {
 
     private PushConnector pushConnector;
     private boolean registered;
+    private boolean inBackground;
     KrollFunction receiveCallback;
 
 
@@ -234,7 +237,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         int limit = Integer.MAX_VALUE;
         KrollFunction successCallback = null;
         if (args instanceof HashMap) {
-            HashMap<String, Object> options = (HashMap<String, Object>) args;
+            HashMap options = (HashMap<String, Object>) args;
             if (options.containsKey("offset")) offset = TiConvert.toInt(options, "offset");
             if (options.containsKey("limit")) limit = TiConvert.toInt(options, "limit");
             Object success = options.get("success");
@@ -247,59 +250,7 @@ public class XtremePushTitaniumModule extends KrollModule {
             return;
         }
 
-        class Callback implements Handler.Callback {
-            KrollFunction successCallback;
-            KrollObject module;
-            int offset;
-            int limit;
-
-            public Callback(KrollObject module, KrollFunction successCallback, int offset, int limit) {
-                this.module = module;
-                this.successCallback = successCallback;
-                this.offset = offset;
-                this.limit = limit;
-            }
-
-            @Subscribe
-            public void consumeEventList(EventsPushlistWrapper pushMessageListItems) {
-                PushConnector.unregisterInEventBus(this);
-                if (successCallback == null) return;
-
-                ArrayList<PushmessageListItem> pushList = pushMessageListItems.getEventPushlist();
-
-                ArrayList<HashMap> notifications = new ArrayList<HashMap>();
-                for (PushmessageListItem item : pushList) {
-                    HashMap<String, Object> notification = new KrollDict();
-                    notification.put("id", item.id);
-                    notification.put("messageId", item.messageId);
-                    notification.put("read", item.read);
-                    if (item.createTimestamp != null && !item.createTimestamp.equals(""))
-                        notification.put("createTimestamp", TiConvert.toInt(item.createTimestamp));
-                    if (item.locationId != null && !item.locationId.equals("null"))
-                        notification.put("locationId", item.locationId);
-                    if (item.tag != null && !item.tag.equals("null"))
-                        notification.put("tag", item.tag);
-                    fillNotificationWithPushMessage(notification, item.message);
-
-                    notifications.add(notification);
-                }
-
-                HashMap<String, Object> res = new HashMap<String, Object>();
-                res.put("code", 0);
-                res.put("success", true);
-                res.put("notifications", notifications.toArray());
-                successCallback.call(module, res);
-            }
-
-            @Override
-            public boolean handleMessage(Message message) {
-                PushConnector.registerInEventBus(this);
-                pushConnector.getPushlist(offset, limit);
-                return true;
-            }
-        }
-
-        Callback callback = new Callback(getKrollObject(), successCallback, offset, limit);
+        NotificationsCallback callback = new NotificationsCallback(getKrollObject(), successCallback, offset, limit);
         new Handler(Looper.getMainLooper(), callback).obtainMessage(0).sendToTarget();
     }
 
@@ -310,9 +261,16 @@ public class XtremePushTitaniumModule extends KrollModule {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Bundle extras = intent.getExtras();
-                if (extras == null) return;
+                if (extras == null || receiveCallback == null) return;
 
-                extras.get(GCMIntentService.EXTRAS_PUSH_MESSAGE);
+                PushMessage message = (PushMessage) extras.get(GCMIntentService.EXTRAS_PUSH_MESSAGE);
+                Map notification = notificationWithPushMessage(message);
+
+                HashMap<String, Object> res = new HashMap<String, Object>();
+                res.put("data", notification);
+                res.put("inBackground", inBackground);
+
+                receiveCallback.call(getKrollObject(), res);
             }
         };
 
@@ -321,19 +279,90 @@ public class XtremePushTitaniumModule extends KrollModule {
         appContext.registerReceiver(mReceiver, intentFilter);
     }
 
-    private HashMap<String, Object> fillNotificationWithPushMessage(HashMap<String, Object> notification, PushMessage message) {
-        if (message != null) {
-            notification.put("openInBrowser", message.openInBrowser);
-            if (message.alert != null) notification.put("alert", message.alert);
-            if (message.sound != null && !message.sound.equals(""))
-                notification.put("sound", message.sound);
-            if (message.url != null && !message.url.equals(""))
-                notification.put("url", message.url);
-            if (message.badge != null && !message.badge.equals(""))
-                notification.put("badge", TiConvert.toInt(message.badge));
-            if (message.pushActionId != null && !message.pushActionId.equals("null"))
-                notification.put("pushActionId", message.pushActionId);
+    class NotificationsCallback implements Handler.Callback {
+        KrollFunction successCallback;
+        KrollObject module;
+        int offset;
+        int limit;
+
+        public NotificationsCallback(KrollObject module, KrollFunction successCallback, int offset, int limit) {
+            this.module = module;
+            this.successCallback = successCallback;
+            this.offset = offset;
+            this.limit = limit;
         }
+
+        @Subscribe
+        public void consumeEventList(EventsPushlistWrapper pushMessageListItems) {
+            PushConnector.unregisterInEventBus(this);
+            if (successCallback == null) return;
+
+            ArrayList<PushmessageListItem> pushList = pushMessageListItems.getEventPushlist();
+
+            ArrayList<HashMap> notifications = new ArrayList<HashMap>();
+            for (PushmessageListItem item : pushList) {
+                HashMap<String, Object> notification = notificationWithPushMessage(item.message);
+                notification.put("id", item.id);
+                notification.put("messageId", item.messageId);
+                notification.put("read", item.read);
+                if (item.createTimestamp != null && !item.createTimestamp.equals(""))
+                    notification.put("createTimestamp", TiConvert.toInt(item.createTimestamp));
+                if (item.locationId != null && !item.locationId.equals("null"))
+                    notification.put("locationId", item.locationId);
+                if (item.tag != null && !item.tag.equals("null"))
+                    notification.put("tag", item.tag);
+
+                notifications.add(notification);
+            }
+
+            HashMap<String, Object> res = new HashMap<String, Object>();
+            res.put("code", 0);
+            res.put("success", true);
+            res.put("notifications", notifications.toArray());
+            successCallback.call(module, res);
+        }
+
+        @Override
+        public boolean handleMessage(Message message) {
+            PushConnector.registerInEventBus(this);
+            pushConnector.getPushlist(offset, limit);
+            return true;
+        }
+    }
+
+    private HashMap<String, Object> notificationWithPushMessage(PushMessage message) {
+        HashMap<String, Object> notification = new HashMap<String, Object>();
+        if (message == null) return notification;
+
+        notification.put("openInBrowser", message.openInBrowser);
+        if (message.alert != null) notification.put("alert", message.alert);
+        if (message.sound != null && !message.sound.equals(""))
+            notification.put("sound", message.sound);
+        if (message.url != null && !message.url.equals(""))
+            notification.put("url", message.url);
+        if (message.badge != null && !message.badge.equals(""))
+            notification.put("badge", TiConvert.toInt(message.badge));
+        if (message.pushActionId != null && !message.pushActionId.equals("null"))
+            notification.put("pushActionId", message.pushActionId);
+
         return notification;
+    }
+
+    @Override
+    public void onPause(Activity activity) {
+        super.onPause(activity);
+        inBackground = true;
+    }
+
+    @Override
+    public void onResume(Activity activity) {
+        super.onResume(activity);
+        inBackground = false;
+    }
+
+    @Override
+    public void onDestroy(Activity activity) {
+        super.onDestroy(activity);
+        inBackground = true;
     }
 }
