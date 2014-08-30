@@ -158,11 +158,11 @@
             NSMutableDictionary *notification = [NSMutableDictionary dictionary];
             notification[@"badge"] = @(model.badge);
             notification[@"shouldOpenInApp"] = @(model.shouldOpenInApp);
-            if (model.pushId) notification[@"pushId"] = model.pushId;
+            if (model.pushId) notification[@"id"] = @([TiUtils intValue:model.pushId]);
             if (model.locationId) notification[@"locationId"] = model.locationId;
             if (model.alert) notification[@"alert"] = model.alert;
-            if (model.messageId) notification[@"messageId"] = model.messageId;
-            if (model.url) notification[@"pushId"] = model.url;
+            if (model.messageId) notification[@"messageId"] = @([TiUtils intValue:model.messageId]);
+            if (model.url) notification[@"url"] = model.url;
             if (model.createDate)
                 notification[@"createDate"] = [NSDateFormatter localizedStringFromDate:model.createDate
                                                                              dateStyle:NSDateFormatterShortStyle
