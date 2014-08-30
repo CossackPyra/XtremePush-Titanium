@@ -127,21 +127,21 @@ public class XtremePushTitaniumModule extends KrollModule {
     }
 
     @Kroll.getProperty
-    public String getIsSandboxModeOn() {
+    public boolean getIsSandboxModeOn() {
         Log.w(LCAT, "isSandboxModeOn not implemented in Android");
-        return null;
+        return false;
     }
 
     @Kroll.getProperty
-    public String getVersion() {
+    public Object getVersion() {
         Log.w(LCAT, "version not implemented in Android");
         return null;
     }
 
     @Kroll.getProperty
-    public String getShouldWipeBadgeNumber() {
+    public boolean getShouldWipeBadgeNumber() {
         Log.w(LCAT, "shouldWipeBadgeNumber not implemented in Android");
-        return null;
+        return false;
     }
 
     @Kroll.setProperty
