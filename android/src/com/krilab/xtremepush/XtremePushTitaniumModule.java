@@ -13,6 +13,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.support.v4.app.FragmentManager;
 import com.squareup.otto.Subscribe;
+import ie.imobile.extremepush.GCMIntentService;
 import org.appcelerator.kroll.*;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
@@ -34,8 +35,9 @@ import ie.imobile.extremepush.util.LocationAccessHelper;
 public class XtremePushTitaniumModule extends KrollModule {
     private static final String LCAT = "XtremePushTitaniumModule";
 
-    private PushConnector pushConnector = null;
-    private boolean registered = false;
+    private PushConnector pushConnector;
+    private boolean registered;
+    KrollFunction receiveCallback;
 
 
     @Kroll.onAppCreate
@@ -69,7 +71,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         class NewIntentCallback implements KrollEventCallback {
             @Override
             public void call(Object o) {
-                Log.i(LCAT, "new intent callback");
+                Log.e(LCAT, "new intent callback");
 
                 KrollDict data = (KrollDict) o;
                 IntentProxy ip = (IntentProxy) data.get(TiC.PROPERTY_INTENT);
@@ -81,7 +83,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         class StartLocationHandler implements TiActivityResultHandler {
             @Override
             public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
-                Log.i(LCAT, "start location callback");
+                Log.e(LCAT, "start location callback");
 
                 pushConnector.onActivityResult(requestCode, resultCode, data);
             }
@@ -265,19 +267,8 @@ public class XtremePushTitaniumModule extends KrollModule {
                         notification.put("locationId", item.locationId);
                     if (item.tag != null && !item.tag.equals("null"))
                         notification.put("tag", item.tag);
-                    PushMessage message = item.message;
-                    if (message != null) {
-                        notification.put("openInBrowser", message.openInBrowser);
-                        if (message.alert != null) notification.put("alert", message.alert);
-                        if (message.sound != null && !message.sound.equals(""))
-                            notification.put("sound", message.sound);
-                        if (message.url != null && !message.url.equals(""))
-                            notification.put("url", message.url);
-                        if (message.badge != null && !message.badge.equals(""))
-                            notification.put("badge", TiConvert.toInt(message.badge));
-                        if (message.pushActionId != null && !message.pushActionId.equals("null"))
-                            notification.put("pushActionId", message.pushActionId);
-                    }
+                    fillNotificationWithPushMessage(notification, item.message);
+
                     notifications.add(notification);
                 }
 
@@ -301,30 +292,36 @@ public class XtremePushTitaniumModule extends KrollModule {
     }
 
     private void initNotificationMessageReceivers(){
-        IntentFilter intentFilter = new IntentFilter(
-                "ie.imobile.extremepush.action_message");
+        IntentFilter intentFilter = new IntentFilter(GCMIntentService.ACTION_MESSAGE);
 
         BroadcastReceiver mReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Bundle extras = intent.getExtras();
+                if (extras == null) return;
 
-                if (extras != null)
-                {
-                    for (String key : extras.keySet()) {
-                        Object value = extras.get(key);
-//                        Log.e(LCAT, kevaluey);
-                    }
-//                    if (inForeground) {
-//                        extras.putBoolean("foreground", true);
-//                        sendExtras(extras);
-//                    }
-                }
+                extras.get(GCMIntentService.EXTRAS_PUSH_MESSAGE);
             }
         };
 
         TiApplication app = TiApplication.getInstance();
         Context appContext = app.getApplicationContext();
         appContext.registerReceiver(mReceiver, intentFilter);
+    }
+
+    private HashMap<String, Object> fillNotificationWithPushMessage(HashMap<String, Object> notification, PushMessage message) {
+        if (message != null) {
+            notification.put("openInBrowser", message.openInBrowser);
+            if (message.alert != null) notification.put("alert", message.alert);
+            if (message.sound != null && !message.sound.equals(""))
+                notification.put("sound", message.sound);
+            if (message.url != null && !message.url.equals(""))
+                notification.put("url", message.url);
+            if (message.badge != null && !message.badge.equals(""))
+                notification.put("badge", TiConvert.toInt(message.badge));
+            if (message.pushActionId != null && !message.pushActionId.equals("null"))
+                notification.put("pushActionId", message.pushActionId);
+        }
+        return notification;
     }
 }
