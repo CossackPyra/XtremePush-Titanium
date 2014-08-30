@@ -4,15 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
+import android.os.*;
 import android.support.v4.app.FragmentManager;
 import com.squareup.otto.Subscribe;
 import ie.imobile.extremepush.GCMIntentService;
@@ -74,32 +72,6 @@ public class XtremePushTitaniumModule extends KrollModule {
             this.receiveCallback = (KrollFunction) receiveCallback;
         }
 
-
-        class NewIntentCallback implements KrollEventCallback {
-            @Override
-            public void call(Object o) {
-                Log.e(LCAT, "new intent callback");
-
-                KrollDict data = (KrollDict) o;
-                IntentProxy ip = (IntentProxy) data.get(TiC.PROPERTY_INTENT);
-                Intent intent = ip.getIntent();
-                pushConnector.onNewIntent(intent);
-            }
-        }
-
-        class StartLocationHandler implements TiActivityResultHandler {
-            @Override
-            public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
-                Log.e(LCAT, "start location callback");
-
-                pushConnector.onActivityResult(requestCode, resultCode, data);
-            }
-
-            @Override
-            public void onError(Activity activity, int requestCode, Exception e) {
-                Log.e(LCAT, "start location error");
-            }
-        }
 
         ActivityProxy activityProxy = activity.getActivityProxy();
         activityProxy.addEventListener(TiC.EVENT_NEW_INTENT, new NewIntentCallback());
@@ -226,6 +198,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         app.getCurrentActivity().startActivity(intent);
     }
 
+    @TargetApi(Build.VERSION_CODES.CUPCAKE)
     @Kroll.method
     public void getPushNotifications(@Kroll.argument(optional=true) Object args) {
         if (!registered) {
@@ -279,6 +252,33 @@ public class XtremePushTitaniumModule extends KrollModule {
         appContext.registerReceiver(mReceiver, intentFilter);
     }
 
+    class NewIntentCallback implements KrollEventCallback {
+        @Override
+        public void call(Object o) {
+            Log.e(LCAT, "new intent callback");
+
+            KrollDict data = (KrollDict) o;
+            IntentProxy ip = (IntentProxy) data.get(TiC.PROPERTY_INTENT);
+            Intent intent = ip.getIntent();
+            pushConnector.onNewIntent(intent);
+        }
+    }
+
+    class StartLocationHandler implements TiActivityResultHandler {
+        @Override
+        public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
+            Log.e(LCAT, "start location callback");
+
+            pushConnector.onActivityResult(requestCode, resultCode, data);
+        }
+
+        @Override
+        public void onError(Activity activity, int requestCode, Exception e) {
+            Log.e(LCAT, "start location error");
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.CUPCAKE)
     class NotificationsCallback implements Handler.Callback {
         KrollFunction successCallback;
         KrollObject module;
