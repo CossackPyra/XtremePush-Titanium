@@ -234,14 +234,16 @@ public class XtremePushTitaniumModule extends KrollModule {
             if (options.containsKey("offset")) offset = TiConvert.toInt(options, "offset");
             if (options.containsKey("limit")) limit = TiConvert.toInt(options, "limit");
             Object success = options.get("success");
-            if (success instanceof KrollFunction) successCallback = (KrollFunction) success;
+            if (success != null && !(success instanceof KrollFunction))
+                throw new IllegalArgumentException("Unsupported property type for 'success' " + success.getClass().getName());
+            successCallback = (KrollFunction) success;
         }
 
         class Callback implements Handler.Callback {
-            KrollFunction successCallback = null;
-            KrollObject module = null;
-            int offset = 0;
-            int limit = 0;
+            KrollFunction successCallback;
+            KrollObject module;
+            int offset;
+            int limit;
 
             public Callback(KrollObject module, KrollFunction successCallback, int offset, int limit) {
                 this.module = module;
@@ -253,6 +255,8 @@ public class XtremePushTitaniumModule extends KrollModule {
             @Subscribe
             public void consumeEventList(EventsPushlistWrapper pushMessageListItems) {
                 PushConnector.unregisterInEventBus(this);
+                if (successCallback == null) return;
+
                 ArrayList<PushmessageListItem> pushList = pushMessageListItems.getEventPushlist();
 
                 ArrayList<HashMap> notifications = new ArrayList<HashMap>();
