@@ -189,43 +189,41 @@
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     [XPush applicationDidRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+    if (!_registerSuccessCallback) return;
 
-    if (_registerSuccessCallback) {
-        NSString *token = [[[[deviceToken description] stringByReplacingOccurrencesOfString:@"<" withString:@""]
-                stringByReplacingOccurrencesOfString:@">" withString:@""]
-                stringByReplacingOccurrencesOfString:@" " withString:@""];
-        NSDictionary *res = @{
-                @"code" : @0,
-                @"success" : @YES,
-                @"deviceToken" : token
-        };
-        [self _fireEventToListener:@"remote" withObject:res listener:_registerSuccessCallback thisObject:self];
-    }
+    NSString *token = [[[[deviceToken description] stringByReplacingOccurrencesOfString:@"<" withString:@""]
+            stringByReplacingOccurrencesOfString:@">" withString:@""]
+            stringByReplacingOccurrencesOfString:@" " withString:@""];
+    NSDictionary *res = @{
+            @"code" : @0,
+            @"success" : @YES,
+            @"deviceToken" : token
+    };
+    [self _fireEventToListener:@"remote" withObject:res listener:_registerSuccessCallback thisObject:self];
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
     [XPush applicationDidFailToRegisterForRemoteNotificationsWithError:error];
+    if (!_registerErrorCallback) return;
 
-    if (_registerErrorCallback) {
-        NSDictionary *res = @{
-                @"code" : @([error code]),
-                @"error" : [error localizedDescription],
-                @"success" : @NO
-        };
-        [self _fireEventToListener:@"remote" withObject:res listener:_registerErrorCallback thisObject:self];
-    }
+    NSDictionary *res = @{
+            @"code" : @([error code]),
+            @"error" : [error localizedDescription],
+            @"success" : @NO
+    };
+    [self _fireEventToListener:@"remote" withObject:res listener:_registerErrorCallback thisObject:self];
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
     [XPush applicationDidReceiveRemoteNotification:userInfo showAlert:_showAlerts];
-    if (_receiveCallback) {
-        BOOL inBackground = (application.applicationState != UIApplicationStateActive);
-        NSDictionary *res = @{
-            @"data" : userInfo,
-            @"inBackground" : @(inBackground)
-        };
-        [self _fireEventToListener:@"remote" withObject:res listener:_receiveCallback thisObject:self];
-    }
+    if (!_receiveCallback) return;
+
+    BOOL inBackground = (application.applicationState != UIApplicationStateActive);
+    NSDictionary *res = @{
+        @"data" : userInfo,
+        @"inBackground" : @(inBackground)
+    };
+    [self _fireEventToListener:@"remote" withObject:res listener:_receiveCallback thisObject:self];
 }
 
 @end
