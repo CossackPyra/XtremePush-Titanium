@@ -116,6 +116,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         }
 
         initNotificationMessageReceivers();
+
         // @WARN: not valid now because no callbacks to PushConnector.init() :(
         registered = true;
     }
@@ -293,7 +294,7 @@ public class XtremePushTitaniumModule extends KrollModule {
                 pushConnector.getPushlist(offset, limit);
                 return true;
             }
-    }
+        }
 
         Callback callback = new Callback(getKrollObject(), successCallback, offset, limit);
         new Handler(Looper.getMainLooper(), callback).obtainMessage(0).sendToTarget();
