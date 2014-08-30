@@ -116,6 +116,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         }
 
         initNotificationMessageReceivers();
+        // @WARN: not valid now because no callbacks to PushConnector.init() :(
         registered = true;
     }
 
