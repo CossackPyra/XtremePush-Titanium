@@ -14,6 +14,7 @@ import android.os.*;
 import android.support.v4.app.FragmentManager;
 import com.squareup.otto.Subscribe;
 import ie.imobile.extremepush.GCMIntentService;
+import ie.imobile.extremepush.util.LibVersion;
 import org.appcelerator.kroll.*;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
@@ -155,9 +156,8 @@ public class XtremePushTitaniumModule extends KrollModule {
     }
 
     @Kroll.getProperty
-    public Object getVersion() {
-        Log.w(LCAT, "version not implemented in Android");
-        return null;
+    public String getVersion() {
+        return LibVersion.VER;
     }
 
     @Kroll.getProperty
