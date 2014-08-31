@@ -63,7 +63,9 @@ public class XtremePushTitaniumModule extends KrollModule {
         Object locationTimeoutValue = null;
         Object locationDistanceValue = null;
         if (args instanceof HashMap) {
+            @SuppressWarnings("unchecked")
             HashMap<String, Object> options = (HashMap<String, Object>) args;
+
             locationTimeoutValue = options.get("locationTimeoutValue");
             locationDistanceValue = options.get("locationDistanceValue");
             Object receiveCallback = options.get("callback");
@@ -210,7 +212,9 @@ public class XtremePushTitaniumModule extends KrollModule {
         int limit = Integer.MAX_VALUE;
         KrollFunction successCallback = null;
         if (args instanceof HashMap) {
-            HashMap options = (HashMap<String, Object>) args;
+            @SuppressWarnings("unchecked")
+            HashMap<String, Object> options = (HashMap<String, Object>) args;
+
             if (options.containsKey("offset")) offset = TiConvert.toInt(options, "offset");
             if (options.containsKey("limit")) limit = TiConvert.toInt(options, "limit");
             Object success = options.get("success");
@@ -302,15 +306,19 @@ public class XtremePushTitaniumModule extends KrollModule {
             ArrayList<HashMap> notifications = new ArrayList<HashMap>();
             for (PushmessageListItem item : pushList) {
                 HashMap<String, Object> notification = notificationWithPushMessage(item.message);
+
                 notification.put("id", item.id);
                 notification.put("messageId", item.messageId);
                 notification.put("read", item.read);
-                if (item.createTimestamp != null && !item.createTimestamp.equals(""))
+                if (item.createTimestamp != null && !item.createTimestamp.equals("") && !item.createTimestamp.equals("")) {
                     notification.put("createTimestamp", TiConvert.toInt(item.createTimestamp));
-                if (item.locationId != null && !item.locationId.equals("null"))
+                }
+                if (item.locationId != null && !item.locationId.equals("") && !item.locationId.equals("null")) {
                     notification.put("locationId", item.locationId);
-                if (item.tag != null && !item.tag.equals("null"))
+                }
+                if (item.tag != null && !item.tag.equals("") && !item.tag.equals("null")) {
                     notification.put("tag", item.tag);
+                }
 
                 notifications.add(notification);
             }
@@ -335,15 +343,21 @@ public class XtremePushTitaniumModule extends KrollModule {
         if (message == null) return notification;
 
         notification.put("openInBrowser", message.openInBrowser);
-        if (message.alert != null) notification.put("alert", message.alert);
-        if (message.sound != null && !message.sound.equals(""))
+        if (message.alert != null) {
+            notification.put("alert", message.alert);
+        }
+        if (message.sound != null && !message.sound.equals("") && !message.sound.equals("null")) {
             notification.put("sound", message.sound);
-        if (message.url != null && !message.url.equals(""))
+        }
+        if (message.url != null && !message.url.equals("") && !message.url.equals("null")) {
             notification.put("url", message.url);
-        if (message.badge != null && !message.badge.equals(""))
+        }
+        if (message.badge != null && !message.badge.equals("") && !message.badge.equals("null")) {
             notification.put("badge", TiConvert.toInt(message.badge));
-        if (message.pushActionId != null && !message.pushActionId.equals("null"))
+        }
+        if (message.pushActionId != null && !message.pushActionId.equals("") && !message.pushActionId.equals("null")) {
             notification.put("pushActionId", message.pushActionId);
+        }
 
         return notification;
     }
