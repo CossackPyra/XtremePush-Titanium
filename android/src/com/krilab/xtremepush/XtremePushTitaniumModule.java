@@ -51,6 +51,15 @@ public class XtremePushTitaniumModule extends KrollModule {
 
     @Kroll.method
     public void registerForRemoteNotifications(@Kroll.argument(optional = true) Object args) {
+        if (registered) {
+            Log.w(LCAT, "registerForRemoteNotifications(): already registered; return");
+            return;
+        }
+        if (pushConnector != null) {
+            Log.w(LCAT, "registerForRemoteNotifications(): already in registration process; return");
+            return;
+        }
+
         TiApplication app = TiApplication.getInstance();
         TiProperties properties = app.getAppProperties();
 
