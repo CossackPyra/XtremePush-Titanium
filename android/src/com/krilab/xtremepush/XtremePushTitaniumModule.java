@@ -193,7 +193,15 @@ public class XtremePushTitaniumModule extends KrollModule {
 
     @Kroll.setProperty
     public void setLocationEnabled(Object arg) {
-        Log.w(LCAT, "locationEnabled not implemented in Android");
+        if (!registered) {
+            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+            return;
+        }
+
+        boolean locationEnabled = TiConvert.toBoolean(arg);
+        TiApplication app = TiApplication.getInstance();
+        Context appContext = app.getApplicationContext();
+        PushConnector.locationEnabled(appContext, locationEnabled);
     }
 
     @Kroll.setProperty
