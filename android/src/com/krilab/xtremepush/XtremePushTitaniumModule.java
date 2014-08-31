@@ -49,7 +49,7 @@ public class XtremePushTitaniumModule extends KrollModule {
     }
 
     @Kroll.method
-    public void registerForRemoteNotifications(@Kroll.argument(optional=true) Object args) {
+    public void registerForRemoteNotifications(@Kroll.argument(optional = true) Object args) {
         TiApplication app = TiApplication.getInstance();
         TiProperties properties = app.getAppProperties();
 
@@ -59,30 +59,32 @@ public class XtremePushTitaniumModule extends KrollModule {
             throw new IllegalArgumentException("XtremePushApplicationKey or GoogleProjectNumber missed in tiapp.xml");
         }
 
-        TiRootActivity activity = app.getRootActivity();
-        FragmentManager fragmentManager = activity.getSupportFragmentManager();
+        if (args != null && !(args instanceof HashMap)) {
+            throw new IllegalArgumentException("registerForRemoteNotifications(): unsupported argument " + args.getClass().getName());
+        }
 
         Object locationTimeoutValue = null;
         Object locationDistanceValue = null;
-        if (args instanceof HashMap) {
+        if (args != null) {
             @SuppressWarnings("unchecked")
             HashMap<String, Object> options = (HashMap<String, Object>) args;
-
             locationTimeoutValue = options.get("locationTimeoutValue");
             locationDistanceValue = options.get("locationDistanceValue");
             Object receiveCallback = options.get("callback");
-            if (receiveCallback != null && !(receiveCallback instanceof KrollFunction))
-                throw new IllegalArgumentException("Unsupported property type for 'callback' " + receiveCallback.getClass().getName());
+            if (receiveCallback != null && !(receiveCallback instanceof KrollFunction)) {
+                throw new IllegalArgumentException("registerForRemoteNotifications(): unsupported property type for 'callback' " + receiveCallback.getClass().getName());
+            }
             this.receiveCallback = (KrollFunction) receiveCallback;
         }
 
-
+        TiRootActivity activity = app.getRootActivity();
+        FragmentManager fragmentManager = activity.getSupportFragmentManager();
         ActivityProxy activityProxy = activity.getActivityProxy();
         activityProxy.addEventListener(TiC.EVENT_NEW_INTENT, new NewIntentCallback());
 
         // getSupportHelper() is protected so try to search it to register START_LOCATION_ACTIVITY_CODE
         activity.getUniqueResultCode(); // init support helper
-        for (int i = 0; i< 100; i++) { // search activity helper
+        for (int i = 0; i < 100; i++) { // search activity helper
             TiActivitySupportHelper activitySupportHelper = TiActivitySupportHelpers.retrieveSupportHelper(activity, i);
             if (activitySupportHelper == null) continue;
 
@@ -102,6 +104,42 @@ public class XtremePushTitaniumModule extends KrollModule {
 
         initRegisterReceiver();
         initMessageReceiver();
+    }
+
+    @TargetApi(Build.VERSION_CODES.CUPCAKE)
+    @Kroll.method
+    public void getPushNotifications(@Kroll.argument(optional = true) Object args) {
+        if (!registered) {
+            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+            return;
+        }
+
+        if (args != null && !(args instanceof HashMap)) {
+            throw new IllegalArgumentException("getPushNotifications(): unsupported argument " + args.getClass().getName());
+        }
+
+        int offset = 0;
+        int limit = Integer.MAX_VALUE;
+        KrollFunction successCallback = null;
+        if (args != null) {
+            @SuppressWarnings("unchecked")
+            HashMap<String, Object> options = (HashMap<String, Object>) args;
+
+            if (options.containsKey("offset")) offset = TiConvert.toInt(options, "offset");
+            if (options.containsKey("limit")) limit = TiConvert.toInt(options, "limit");
+            Object success = options.get("success");
+            if (success != null && !(success instanceof KrollFunction)) {
+                throw new IllegalArgumentException("Unsupported property type for 'success' " + success.getClass().getName());
+            }
+            successCallback = (KrollFunction) success;
+        }
+        if (successCallback == null) {
+            Log.w(LCAT, "No success callback to getPushNotifications(); return");
+            return;
+        }
+
+        NotificationsCallback callback = new NotificationsCallback(getKrollObject(), successCallback, offset, limit);
+        new Handler(Looper.getMainLooper(), callback).obtainMessage(0).sendToTarget();
     }
 
     @Kroll.method
@@ -197,37 +235,6 @@ public class XtremePushTitaniumModule extends KrollModule {
         Context appContext = app.getApplicationContext();
         Intent intent = new Intent(appContext, XPushLogActivity.class);
         app.getCurrentActivity().startActivity(intent);
-    }
-
-    @TargetApi(Build.VERSION_CODES.CUPCAKE)
-    @Kroll.method
-    public void getPushNotifications(@Kroll.argument(optional=true) Object args) {
-        if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
-            return;
-        }
-
-        int offset = 0;
-        int limit = Integer.MAX_VALUE;
-        KrollFunction successCallback = null;
-        if (args instanceof HashMap) {
-            @SuppressWarnings("unchecked")
-            HashMap<String, Object> options = (HashMap<String, Object>) args;
-
-            if (options.containsKey("offset")) offset = TiConvert.toInt(options, "offset");
-            if (options.containsKey("limit")) limit = TiConvert.toInt(options, "limit");
-            Object success = options.get("success");
-            if (success != null && !(success instanceof KrollFunction))
-                throw new IllegalArgumentException("Unsupported property type for 'success' " + success.getClass().getName());
-            successCallback = (KrollFunction) success;
-        }
-        if (successCallback == null) {
-            Log.w(LCAT, "No success callback to getPushNotifications(); return");
-            return;
-        }
-
-        NotificationsCallback callback = new NotificationsCallback(getKrollObject(), successCallback, offset, limit);
-        new Handler(Looper.getMainLooper(), callback).obtainMessage(0).sendToTarget();
     }
 
     private void initRegisterReceiver() {
