@@ -37,6 +37,8 @@ public class XtremePushTitaniumModule extends KrollModule {
 
     private PushConnector pushConnector;
     private boolean registered;
+    private boolean messageReceiverRegistered;
+    private boolean registerReceiverRegistered;
     private boolean inBackground;
     KrollFunction receiveCallback;
 
@@ -98,10 +100,8 @@ public class XtremePushTitaniumModule extends KrollModule {
             pushConnector = PushConnector.init(fragmentManager, appKey, projectNumber);
         }
 
-        initNotificationMessageReceivers();
-
-        // @WARN: not valid now because no callbacks to PushConnector.init() :(
-        registered = true;
+        initRegisterReceiver();
+        initMessageReceiver();
     }
 
     @Kroll.method
@@ -140,8 +140,7 @@ public class XtremePushTitaniumModule extends KrollModule {
             return null;
         }
 
-        // @WARN: can crash if no deviceToken or XPushDeviceID
-        // and we can't check it now
+        // @WARN: can crash if no deviceToken or XPushDeviceID (bug in android SDK)
         return pushConnector.getDeviceInfo();
     }
 
@@ -231,8 +230,26 @@ public class XtremePushTitaniumModule extends KrollModule {
         new Handler(Looper.getMainLooper(), callback).obtainMessage(0).sendToTarget();
     }
 
-    private void initNotificationMessageReceivers(){
-        IntentFilter intentFilter = new IntentFilter(GCMIntentService.ACTION_MESSAGE);
+    private void initRegisterReceiver() {
+        if (registerReceiverRegistered) return;
+
+        BroadcastReceiver mReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                registered = true;
+            }
+        };
+
+        IntentFilter intentFilter = new IntentFilter(GCMIntentService.ACTION_REGISTER_ON_SERVER);
+        TiApplication app = TiApplication.getInstance();
+        Context appContext = app.getApplicationContext();
+        appContext.registerReceiver(mReceiver, intentFilter);
+
+        registerReceiverRegistered = true;
+    }
+
+    private void initMessageReceiver() {
+        if (messageReceiverRegistered) return;
 
         BroadcastReceiver mReceiver = new BroadcastReceiver() {
             @Override
@@ -251,9 +268,12 @@ public class XtremePushTitaniumModule extends KrollModule {
             }
         };
 
+        IntentFilter intentFilter = new IntentFilter(GCMIntentService.ACTION_MESSAGE);
         TiApplication app = TiApplication.getInstance();
         Context appContext = app.getApplicationContext();
         appContext.registerReceiver(mReceiver, intentFilter);
+
+        messageReceiverRegistered = true;
     }
 
     class NewIntentCallback implements KrollEventCallback {
