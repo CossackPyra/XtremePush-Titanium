@@ -18,6 +18,7 @@ import ie.imobile.extremepush.api.model.PushmessageListItem;
 import ie.imobile.extremepush.ui.XPushLogActivity;
 import ie.imobile.extremepush.util.LibVersion;
 import ie.imobile.extremepush.util.LocationAccessHelper;
+import ie.imobile.extremepush.util.SharedPrefUtils;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.KrollObject;
@@ -207,7 +208,17 @@ public class XtremePushTitaniumModule extends KrollModule {
     @SuppressWarnings("unused")
     @Kroll.setProperty
     public void setAsksForLocationPermissions(Object arg) {
-        Log.w(TAG, "aksForLocationPermissions not implemented in Android");
+        if (arg == null) {
+            Log.w(TAG, "setAsksForLocationPermissions(): please provide value");
+            return;
+        }
+
+        boolean asksForLocationPermissions = TiConvert.toBoolean(arg, false);
+        Log.e(TAG, "asks = " + asksForLocationPermissions);
+
+        TiApplication app = TiApplication.getInstance();
+        TiRootActivity rootActivity = app.getRootActivity();
+        SharedPrefUtils.setPromptTurnLocation(rootActivity, asksForLocationPermissions);
     }
 
     @SuppressWarnings("unused")
@@ -316,13 +327,13 @@ public class XtremePushTitaniumModule extends KrollModule {
     class StartLocationHandler implements TiActivityResultHandler {
         @Override
         public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
-            Log.e(TAG, "onResult!!!!!!!!!!!!!!!");
+            if (pushConnector == null) return;
             pushConnector.onActivityResult(requestCode, resultCode, data);
         }
 
         @Override
         public void onError(Activity activity, int requestCode, Exception e) {
-            Log.e(TAG, "start location error");
+            Log.e(TAG, "StartLocationHandler error");
         }
     }
 
