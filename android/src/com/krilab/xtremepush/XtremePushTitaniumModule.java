@@ -214,7 +214,6 @@ public class XtremePushTitaniumModule extends KrollModule {
         }
 
         boolean asksForLocationPermissions = TiConvert.toBoolean(arg, false);
-        Log.e(TAG, "asks = " + asksForLocationPermissions);
 
         TiApplication app = TiApplication.getInstance();
         TiRootActivity rootActivity = app.getRootActivity();
@@ -499,7 +498,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         if (message.pushActionId != null && !message.pushActionId.equals("") && !message.pushActionId.equals("null")) {
             notification.put("pushActionId", message.pushActionId);
         }
-
+        notification.putAll(message.extra);
         return notification;
     }
 
