@@ -257,7 +257,7 @@ public class XtremePushTitaniumModule extends KrollModule {
         }
 
         String tag = TiConvert.toString(arg);
-        pushConnector.hitTag(tag);
+        pushConnector.hitImpression(tag);
     }
 
     @SuppressWarnings("unused")
