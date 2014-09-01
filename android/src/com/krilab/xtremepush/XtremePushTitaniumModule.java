@@ -1,9 +1,5 @@
 package com.krilab.xtremepush;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -12,51 +8,59 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.*;
 import android.support.v4.app.FragmentManager;
+import com.google.android.gcm.GCMRegistrar;
 import com.squareup.otto.Subscribe;
 import ie.imobile.extremepush.GCMIntentService;
-import ie.imobile.extremepush.util.LibVersion;
-import org.appcelerator.kroll.*;
-import org.appcelerator.kroll.annotations.Kroll;
-import org.appcelerator.kroll.common.Log;
-import org.appcelerator.titanium.*;
-import org.appcelerator.titanium.proxy.ActivityProxy;
-import org.appcelerator.titanium.proxy.IntentProxy;
-import org.appcelerator.titanium.util.TiActivityResultHandler;
-import org.appcelerator.titanium.util.TiActivitySupportHelper;
-import org.appcelerator.titanium.util.TiConvert;
 import ie.imobile.extremepush.PushConnector;
 import ie.imobile.extremepush.api.model.EventsPushlistWrapper;
 import ie.imobile.extremepush.api.model.PushMessage;
 import ie.imobile.extremepush.api.model.PushmessageListItem;
 import ie.imobile.extremepush.ui.XPushLogActivity;
+import ie.imobile.extremepush.util.LibVersion;
 import ie.imobile.extremepush.util.LocationAccessHelper;
+import org.appcelerator.kroll.KrollFunction;
+import org.appcelerator.kroll.KrollModule;
+import org.appcelerator.kroll.KrollObject;
+import org.appcelerator.kroll.annotations.Kroll;
+import org.appcelerator.kroll.common.Log;
+import org.appcelerator.titanium.*;
+import org.appcelerator.titanium.util.TiActivityResultHandler;
+import org.appcelerator.titanium.util.TiActivitySupportHelper;
+import org.appcelerator.titanium.util.TiConvert;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 
+@SuppressWarnings("unused")
 @Kroll.module(name = "XtremePushTitanium", id = "com.krilab.xtremepush")
 public class XtremePushTitaniumModule extends KrollModule {
-    private static final String LCAT = "XtremePushTitaniumModule";
+    private static final String TAG = XtremePushTitaniumModule.class.getName();
 
     private PushConnector pushConnector;
     private boolean registered;
-    private boolean messageReceiverRegistered;
-    private boolean registerReceiverRegistered;
-    private boolean inBackground;
+    private BroadcastReceiver messageReceiver;
+    private BroadcastReceiver registerReceiver;
     KrollFunction receiveCallback;
+    Intent savedMessage;
 
 
+    @SuppressWarnings("unused")
     @Kroll.onAppCreate
     public static void onAppCreate(TiApplication app) {
         ie.imobile.extremepush.util.XR.init(app);
     }
 
+    @SuppressWarnings("unused")
     @Kroll.method
     public void registerForRemoteNotifications(@Kroll.argument(optional = true) Object args) {
         if (registered) {
-            Log.w(LCAT, "registerForRemoteNotifications(): already registered; return");
+            Log.w(TAG, "registerForRemoteNotifications(): already registered; return");
             return;
         }
         if (pushConnector != null) {
-            Log.w(LCAT, "registerForRemoteNotifications(): already in registration process; return");
+            Log.w(TAG, "registerForRemoteNotifications(): already in registration process; return");
             return;
         }
 
@@ -87,40 +91,21 @@ public class XtremePushTitaniumModule extends KrollModule {
             this.receiveCallback = (KrollFunction) receiveCallback;
         }
 
-        TiRootActivity activity = app.getRootActivity();
-        FragmentManager fragmentManager = activity.getSupportFragmentManager();
-        ActivityProxy activityProxy = activity.getActivityProxy();
-        activityProxy.addEventListener(TiC.EVENT_NEW_INTENT, new NewIntentCallback());
-
-        // getSupportHelper() is protected so try to search it to register START_LOCATION_ACTIVITY_CODE
-        activity.getUniqueResultCode(); // init support helper
-        for (int i = 0; i < 100; i++) { // search activity helper
-            TiActivitySupportHelper activitySupportHelper = TiActivitySupportHelpers.retrieveSupportHelper(activity, i);
-            if (activitySupportHelper == null) continue;
-
-            StartLocationHandler startLocationHandler = new StartLocationHandler();
-            int locationActivityCode = LocationAccessHelper.START_LOCATION_ACTIVITY_CODE;
-            activitySupportHelper.registerResultHandler(locationActivityCode, startLocationHandler);
-        }
-
-
-        if (locationTimeoutValue != null && locationDistanceValue != null) {
-            int locationTimeout = TiConvert.toInt(locationTimeoutValue);
-            int locationDistance = TiConvert.toInt(locationDistanceValue);
-            pushConnector = PushConnector.init(fragmentManager, appKey, projectNumber, locationTimeout, locationDistance);
-        } else {
-            pushConnector = PushConnector.init(fragmentManager, appKey, projectNumber);
-        }
-
-        initRegisterReceiver();
         initMessageReceiver();
+        initLocationHandler();
+        pushConnector = createPushConnector(appKey, projectNumber, locationTimeoutValue, locationDistanceValue);
     }
 
+    @SuppressWarnings("unused")
     @TargetApi(Build.VERSION_CODES.CUPCAKE)
     @Kroll.method
     public void getPushNotifications(@Kroll.argument(optional = true) Object args) {
+        if (pushConnector == null) {
+            Log.w(TAG, "Please call registerForRemoteNotifications() first");
+            return;
+        }
         if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+            Log.w(TAG, "Wait before device will be registered");
             return;
         }
 
@@ -144,7 +129,7 @@ public class XtremePushTitaniumModule extends KrollModule {
             successCallback = (KrollFunction) success;
         }
         if (successCallback == null) {
-            Log.w(LCAT, "No success callback to getPushNotifications(); return");
+            Log.w(TAG, "No success callback to getPushNotifications(); return");
             return;
         }
 
@@ -152,38 +137,48 @@ public class XtremePushTitaniumModule extends KrollModule {
         new Handler(Looper.getMainLooper(), callback).obtainMessage(0).sendToTarget();
     }
 
+    @SuppressWarnings("unused")
     @Kroll.method
     public void unregisterForRemoteNotifications() {
         pushConnector = null;
         registered = false;
     }
 
+    @SuppressWarnings("unused")
     @Kroll.getProperty
     public boolean getIsSandboxModeOn() {
-        Log.w(LCAT, "isSandboxModeOn not implemented in Android");
+        Log.w(TAG, "isSandboxModeOn not implemented in Android");
         return false;
     }
 
+    @SuppressWarnings("unused")
     @Kroll.getProperty
     public String getVersion() {
         return LibVersion.VER;
     }
 
+    @SuppressWarnings("unused")
     @Kroll.getProperty
     public boolean getShouldWipeBadgeNumber() {
-        Log.w(LCAT, "shouldWipeBadgeNumber not implemented in Android");
+        Log.w(TAG, "shouldWipeBadgeNumber not implemented in Android");
         return false;
     }
 
+    @SuppressWarnings("unused")
     @Kroll.setProperty
     public void setShouldWipeBadgeNumber(Object arg) {
-        Log.w(LCAT, "shouldWipeBadgeNumber not implemented in Android");
+        Log.w(TAG, "shouldWipeBadgeNumber not implemented in Android");
     }
 
+    @SuppressWarnings("unused")
     @Kroll.getProperty
     public HashMap getDeviceInfo() {
+        if (pushConnector == null) {
+            Log.w(TAG, "Please call registerForRemoteNotifications() first");
+            return null;
+        }
         if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+            Log.w(TAG, "Wait before device will be registered");
             return null;
         }
 
@@ -191,10 +186,15 @@ public class XtremePushTitaniumModule extends KrollModule {
         return pushConnector.getDeviceInfo();
     }
 
+    @SuppressWarnings("unused")
     @Kroll.setProperty
     public void setLocationEnabled(Object arg) {
+        if (pushConnector == null) {
+            Log.w(TAG, "Please call registerForRemoteNotifications() first");
+            return;
+        }
         if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+            Log.w(TAG, "Wait before device will be registered");
             return;
         }
 
@@ -204,20 +204,25 @@ public class XtremePushTitaniumModule extends KrollModule {
         PushConnector.locationEnabled(appContext, locationEnabled);
     }
 
+    @SuppressWarnings("unused")
     @Kroll.setProperty
     public void setAsksForLocationPermissions(Object arg) {
-        Log.w(LCAT, "aksForLocationPermissions not implemented in Android");
+        Log.w(TAG, "aksForLocationPermissions not implemented in Android");
     }
 
+    @SuppressWarnings("unused")
     @Kroll.method
     public void hitTag(Object arg) {
-        if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+        if (pushConnector == null) {
+            Log.w(TAG, "Please call registerForRemoteNotifications() first");
             return;
         }
-
+        if (!registered) {
+            Log.w(TAG, "Wait before device will be registered");
+            return;
+        }
         if (arg == null) {
-            Log.w(LCAT, "Please provide tag");
+            Log.w(TAG, "Please provide tag");
             return;
         }
 
@@ -225,15 +230,19 @@ public class XtremePushTitaniumModule extends KrollModule {
         pushConnector.hitTag(tag);
     }
 
+    @SuppressWarnings("unused")
     @Kroll.method
     public void hitImpression(Object arg) {
-        if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+        if (pushConnector == null) {
+            Log.w(TAG, "Please call registerForRemoteNotifications() first");
             return;
         }
-
+        if (!registered) {
+            Log.w(TAG, "Wait before device will be registered");
+            return;
+        }
         if (arg == null) {
-            Log.w(LCAT, "Please provide impression");
+            Log.w(TAG, "Please provide impression");
             return;
         }
 
@@ -241,10 +250,15 @@ public class XtremePushTitaniumModule extends KrollModule {
         pushConnector.hitTag(tag);
     }
 
+    @SuppressWarnings("unused")
     @Kroll.method
     public void showPushList() {
+        if (pushConnector == null) {
+            Log.w(TAG, "Please call registerForRemoteNotifications() first");
+            return;
+        }
         if (!registered) {
-            Log.w(LCAT, "Please call registerForRemoteNotifications() first");
+            Log.w(TAG, "Wait before device will be registered");
             return;
         }
 
@@ -254,75 +268,144 @@ public class XtremePushTitaniumModule extends KrollModule {
         app.getCurrentActivity().startActivity(intent);
     }
 
-    private void initRegisterReceiver() {
-        if (registerReceiverRegistered) return;
 
-        BroadcastReceiver mReceiver = new BroadcastReceiver() {
+    private void setRegistered() {
+        registered = true;
+        fireSavedMessage();
+    }
+
+    private PushConnector createPushConnector(String appKey, String projectNumber, Object locationTimeoutValue, Object locationDistanceValue) {
+        TiApplication app = TiApplication.getInstance();
+        TiBaseActivity activity = app.getRootActivity();
+        FragmentManager fragmentManager = activity.getSupportFragmentManager();
+
+        PushConnector pushConnector;
+        if (locationTimeoutValue != null && locationDistanceValue != null) {
+            int locationTimeout = TiConvert.toInt(locationTimeoutValue);
+            int locationDistance = TiConvert.toInt(locationDistanceValue);
+            pushConnector = PushConnector.init(fragmentManager, appKey, projectNumber, locationTimeout, locationDistance);
+        } else {
+            pushConnector = PushConnector.init(fragmentManager, appKey, projectNumber);
+        }
+
+        class TransactionExecutor implements Runnable {
+            FragmentManager fragmentManager;
+            public TransactionExecutor(FragmentManager fragmentManager) {
+                this.fragmentManager = fragmentManager;
+            }
+
+            @Override
+            public void run() {
+                // complete transaction to be assure PushManager in PushConnector created
+                fragmentManager.executePendingTransactions();
+
+                TiApplication app = TiApplication.getInstance();
+                if (!GCMRegistrar.isRegistered(app)) {
+                    initRegisterReceiver();
+                } else {
+                    setRegistered();
+                }
+            }
+        }
+        activity.runOnUiThread(new TransactionExecutor(fragmentManager));
+
+        return pushConnector;
+    }
+
+
+    class StartLocationHandler implements TiActivityResultHandler {
+        @Override
+        public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
+            Log.e(TAG, "onResult!!!!!!!!!!!!!!!");
+            pushConnector.onActivityResult(requestCode, resultCode, data);
+        }
+
+        @Override
+        public void onError(Activity activity, int requestCode, Exception e) {
+            Log.e(TAG, "start location error");
+        }
+    }
+
+    private void initLocationHandler() {
+        TiApplication app = TiApplication.getInstance();
+        TiBaseActivity rootActivity = app.getRootActivity();
+
+        // getSupportHelper() is protected so try to search it to register START_LOCATION_ACTIVITY_CODE
+        rootActivity.getUniqueResultCode(); // init support helper
+        for (int i = 0; i < 100; i++) { // search rootActivity helper; must be in first id's
+            TiActivitySupportHelper activitySupportHelper = TiActivitySupportHelpers.retrieveSupportHelper(rootActivity, i);
+            if (activitySupportHelper == null) continue;
+
+            StartLocationHandler startLocationHandler = new StartLocationHandler();
+            int locationActivityCode = LocationAccessHelper.START_LOCATION_ACTIVITY_CODE;
+            activitySupportHelper.registerResultHandler(locationActivityCode, startLocationHandler);
+        }
+    }
+
+
+    private void initRegisterReceiver() {
+        if (registerReceiver != null) return;
+        registerReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                registered = true;
+                setRegistered();
             }
         };
 
         IntentFilter intentFilter = new IntentFilter(GCMIntentService.ACTION_REGISTER_ON_SERVER);
         TiApplication app = TiApplication.getInstance();
         Context appContext = app.getApplicationContext();
-        appContext.registerReceiver(mReceiver, intentFilter);
-
-        registerReceiverRegistered = true;
+        appContext.registerReceiver(registerReceiver, intentFilter);
     }
 
     private void initMessageReceiver() {
-        if (messageReceiverRegistered) return;
-
-        BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        if (messageReceiver != null) return;
+        messageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                Bundle extras = intent.getExtras();
-                if (extras == null || receiveCallback == null) return;
-
-                PushMessage message = (PushMessage) extras.get(GCMIntentService.EXTRAS_PUSH_MESSAGE);
-                Map notification = notificationWithPushMessage(message);
-
-                HashMap<String, Object> res = new HashMap<String, Object>();
-                res.put("data", notification);
-                res.put("inBackground", inBackground);
-
-                receiveCallback.call(getKrollObject(), res);
+                fireReceive(intent);
             }
         };
 
         IntentFilter intentFilter = new IntentFilter(GCMIntentService.ACTION_MESSAGE);
         TiApplication app = TiApplication.getInstance();
         Context appContext = app.getApplicationContext();
-        appContext.registerReceiver(mReceiver, intentFilter);
-
-        messageReceiverRegistered = true;
+        appContext.registerReceiver(messageReceiver, intentFilter);
     }
 
-    class NewIntentCallback implements KrollEventCallback {
-        @Override
-        public void call(Object o) {
-            Log.e(LCAT, "new intent callback");
-
-            KrollDict data = (KrollDict) o;
-            IntentProxy ip = (IntentProxy) data.get(TiC.PROPERTY_INTENT);
-            Intent intent = ip.getIntent();
-            pushConnector.onNewIntent(intent);
-        }
+    private void removeMessageReceiver() {
+        if (messageReceiver == null) return;
+        TiApplication app = TiApplication.getInstance();
+        Context appContext = app.getApplicationContext();
+        appContext.unregisterReceiver(messageReceiver);
     }
 
-    class StartLocationHandler implements TiActivityResultHandler {
-        @Override
-        public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
-            Log.e(LCAT, "start location callback");
+    private void fireReceive(Intent intent) {
+        if (intent == null) return;
 
-            pushConnector.onActivityResult(requestCode, resultCode, data);
-        }
+        Bundle extras = intent.getExtras();
+        if (extras == null || receiveCallback == null) return;
 
-        @Override
-        public void onError(Activity activity, int requestCode, Exception e) {
-            Log.e(LCAT, "start location error");
+        PushMessage message = (PushMessage) extras.get(GCMIntentService.EXTRAS_PUSH_MESSAGE);
+        if (message == null) return;
+
+        boolean inForeground = TiApplication.isCurrentActivityInForeground();
+        boolean inBackground = extras.getBoolean(GCMIntentService.EXTRAS_FROM_NOTIFICATION, !inForeground);
+        Map notification = notificationWithPushMessage(message);
+
+        HashMap<String, Object> res = new HashMap<String, Object>();
+        res.put("data", notification);
+        res.put("inBackground", inBackground);
+
+        Log.d(TAG, "Received notification inBackground=" + inBackground);
+        receiveCallback.call(getKrollObject(), res);
+    }
+
+    private void fireSavedMessage() {
+        if (savedMessage != null) {
+            Log.d(TAG, "Fire saved message");
+            fireReceive(savedMessage);
+            savedMessage = null;
         }
     }
 
@@ -341,7 +424,10 @@ public class XtremePushTitaniumModule extends KrollModule {
         }
 
         @Subscribe
-        public void consumeEventList(EventsPushlistWrapper pushMessageListItems) {
+        public void consumeEventList(Object list) {
+            if (!(list instanceof EventsPushlistWrapper)) return;
+            EventsPushlistWrapper pushMessageListItems = (EventsPushlistWrapper) list;
+
             PushConnector.unregisterInEventBus(this);
             if (successCallback == null) return;
 
@@ -407,20 +493,28 @@ public class XtremePushTitaniumModule extends KrollModule {
     }
 
     @Override
-    public void onPause(Activity activity) {
-        super.onPause(activity);
-        inBackground = true;
-    }
+    public void onStart(Activity activity) {
+        super.onStart(activity);
 
-    @Override
-    public void onResume(Activity activity) {
-        super.onResume(activity);
-        inBackground = false;
+        TiApplication app = TiApplication.getInstance();
+        TiRootActivity rootActivity = app.getRootActivity();
+        if (rootActivity == null) return;
+
+        Intent intent = rootActivity.getIntent();
+        if (intent ==  null) return;
+
+        Bundle extras = intent.getExtras();
+        if (extras == null) return;
+        if (!extras.containsKey(GCMIntentService.EXTRAS_PUSH_MESSAGE)) return;
+
+        savedMessage = intent;
+        if (pushConnector != null)
+            pushConnector.onNewIntent(intent);
     }
 
     @Override
     public void onDestroy(Activity activity) {
         super.onDestroy(activity);
-        inBackground = true;
+        removeMessageReceiver();
     }
 }
