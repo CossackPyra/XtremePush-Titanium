@@ -1,6 +1,6 @@
 # XTREMEPUSH TITANIUM MODULE
 
-This module provide access to [XtremePush](http://xtremepush.com) service from Titanium applications.
+This module provide access to [XtremePush](https://xtremepush.com) service from Titanium applications.
 
 ## INTEGRATION DOCUMENTATION
 
