@@ -83,8 +83,8 @@ public class XtremePushTitaniumModule extends KrollModule {
         if (args != null) {
             @SuppressWarnings("unchecked")
             HashMap<String, Object> options = (HashMap<String, Object>) args;
-            locationTimeoutValue = options.get("locationTimeoutValue");
-            locationDistanceValue = options.get("locationDistanceValue");
+            locationTimeoutValue = options.get("locationTimeout");
+            locationDistanceValue = options.get("locationDistance");
             Object receiveCallback = options.get("callback");
             if (receiveCallback != null && !(receiveCallback instanceof KrollFunction)) {
                 throw new IllegalArgumentException("registerForRemoteNotifications(): unsupported property type for 'callback' " + receiveCallback.getClass().getName());
