@@ -44,6 +44,7 @@ public class XtremePushTitaniumModule extends KrollModule {
     private BroadcastReceiver messageReceiver;
     private BroadcastReceiver registerReceiver;
     KrollFunction receiveCallback;
+    KrollFunction registerCallback;
     Intent savedMessage;
 
 
@@ -85,11 +86,18 @@ public class XtremePushTitaniumModule extends KrollModule {
             HashMap<String, Object> options = (HashMap<String, Object>) args;
             locationTimeoutValue = options.get("locationTimeout");
             locationDistanceValue = options.get("locationDistance");
+
             Object receiveCallback = options.get("callback");
             if (receiveCallback != null && !(receiveCallback instanceof KrollFunction)) {
                 throw new IllegalArgumentException("registerForRemoteNotifications(): unsupported property type for 'callback' " + receiveCallback.getClass().getName());
             }
             this.receiveCallback = (KrollFunction) receiveCallback;
+
+            Object registerCallback = options.get("success");
+            if (registerCallback != null && !(registerCallback instanceof KrollFunction)) {
+                throw new IllegalArgumentException("registerForRemoteNotifications(): unsupported property type for 'success' " + registerCallback.getClass().getName());
+            }
+            this.registerCallback = (KrollFunction) registerCallback;
         }
 
         initMessageReceiver();
@@ -278,9 +286,32 @@ public class XtremePushTitaniumModule extends KrollModule {
         app.getCurrentActivity().startActivity(intent);
     }
 
+    @Kroll.setProperty @Kroll.method
+    public void setReceiveCallback(Object arg) {
+        if (arg == null) {
+            Log.w(TAG, "Please provide callback");
+            return;
+        }
+        if (!(arg instanceof KrollFunction)) {
+            throw new IllegalArgumentException("Unsupported property type for receiveCallback " + arg.getClass().getName());
+        }
+
+        this.receiveCallback = (KrollFunction) arg;
+    }
+
 
     private void setRegistered() {
         registered = true;
+        if (registerCallback != null) {
+            String deviceToken = pushConnector.getDeviceInfo().get("deviceToken");
+
+            HashMap<String, Object> res = new HashMap<String, Object>();
+            res.put("success", true);
+            res.put("code", 0);
+            res.put("deviceToken", deviceToken);
+            registerCallback.call(getKrollObject(), res);
+        }
+
         fireSavedMessage();
     }
 
