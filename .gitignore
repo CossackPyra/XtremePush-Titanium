@@ -1,7 +1,4 @@
-example
-documentation
 LICENSE
-README
 iphone/.idea
 iphone/XtremePush_Titanium.xcodeproj/xcuserdata
 iphone/XtremePush_Titanium.xcodeproj/project.xcworkspace/xcuserdata
@@ -11,3 +8,5 @@ android/.idea
 android/build
 android/dist
 android/libs
+android/example
+android/documentation
