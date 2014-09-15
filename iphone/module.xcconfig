@@ -1,4 +1,4 @@
-OTHER_LDFLAGS=$(inherited) -lXPush -framework CoreTelephony
+OTHER_LDFLAGS=$(inherited) -lXPush -framework CoreTelephony -framework CoreLocation -framework SystemConfiguration -framework MobileCoreServices -framework CFNetwork -framework CoreBluetooth
 
 // don't work now (TIMOB-17030, TC-1908)
 // need to add 'Ti.Network.registerForPushNotifications' (without calling) anywhere in app
