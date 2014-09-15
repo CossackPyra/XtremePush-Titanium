@@ -3,6 +3,11 @@
 #import "TiApp.h"
 #import "XPush.h"
 
+@interface XPush ()
++ (void)setShouldShowDebugLogs:(BOOL)log;
+@end
+
+
 @implementation ComKrilabXtremepushModule
 
 
@@ -36,6 +41,7 @@
 
 + (void)applicationDidFinishLaunching:(NSNotification *)userInfo {
     NSDictionary *launchOptions = [TiApp app].launchOptions;
+    [XPush setShouldShowDebugLogs:YES];
     [XPush applicationDidFinishLaunchingWithOptions:launchOptions];
 }
 
@@ -182,6 +188,10 @@
         };
         [self _fireEventToListener:@"notifications" withObject:res listener:successCallback thisObject:self];
     }];
+}
+
+- (void)setShouldShowDebugLogs:(BOOL)log {
+    [XPush setShouldShowDebugLogs:log];
 }
 
 
